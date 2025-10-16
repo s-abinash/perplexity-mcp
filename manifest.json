@@ -1,1 +1,25 @@
-{\n  "name": "perplexity-search-mcp",\n  "version": "1.0.0",\n  "description": "MCP server for Perplexity AI Search API - Search the web with advanced filtering options",\n  "author": "s-abinash",\n  "main": "server/build/index.js",\n  "icon": "icon.png",\n  "mcpProtocol": "1.0.0",\n  "runtime": {\n    "type": "node",\n    "version": ">=18.0.0"\n  },\n  "environment": {\n    "PERPLEXITY_API_KEY": {\n      "description": "Your Perplexity API key from https://www.perplexity.ai/settings/api",\n      "required": true\n    }\n  },\n  "permissions": [\n    "network"\n  ],\n  "keywords": ["search", "perplexity", "ai", "web-search"],\n  "license": "MIT",\n  "homepage": "https://github.com/s-abinash/perplexity-mcp"\n}
+{
+  "name": "perplexity-search-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Perplexity AI Search API - Search the web with advanced filtering options",
+  "author": "s-abinash",
+  "main": "server/build/index.js",
+  "icon": "icon.png",
+  "mcpProtocol": "1.0.0",
+  "runtime": {
+    "type": "node",
+    "version": ">=18.0.0"
+  },
+  "environment": {
+    "PERPLEXITY_API_KEY": {
+      "description": "Your Perplexity API key from https://www.perplexity.ai/settings/api",
+      "required": true
+    }
+  },
+  "permissions": [
+    "network"
+  ],
+  "keywords": ["search", "perplexity", "ai", "web-search"],
+  "license": "MIT",
+  "homepage": "https://github.com/s-abinash/perplexity-mcp"
+}

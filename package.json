@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "bundle": "npm run build && node scripts/create-mcpb.js"
   },
   "keywords": ["mcp", "perplexity", "search", "ai"],
   "author": "",
