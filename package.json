@@ -1,0 +1,28 @@
+{
+  "name": "perplexity-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Perplexity AI Search API",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "perplexity-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": ["mcp", "perplexity", "search", "ai"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "axios": "^1.12.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
