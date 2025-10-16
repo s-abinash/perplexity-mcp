@@ -1,14 +1,16 @@
-# Perplexity MCP Server
+# Perplexity Search API MCP Server
 
-A Model Context Protocol (MCP) server that provides integration with Perplexity AI's Search API. This server allows AI assistants and other MCP clients to perform web searches using Perplexity's advanced search capabilities.
+A Model Context Protocol (MCP) server that provides integration with Perplexity AI's Search API. This server allows AI assistants and other MCP clients to perform web searches using Perplexity's continuously refreshed index and get ranked search results.
 
 ## Features
 
-- 🔍 Web search using Perplexity AI's search API
-- 📚 Returns comprehensive answers with citations
-- 🖼️ Optional image results
-- 🎯 Multiple model options (small, large, huge)
-- ⚙️ Configurable temperature and other parameters
+- 🔍 Web search using Perplexity AI's Search API (not chat/LLM)
+- � Returns ranked search results with titles, URLs, and snippets
+- 📅 Publication dates and last updated timestamps
+- 🌍 Regional search with country filtering
+- 🎯 Domain filtering to limit results to specific websites
+- 🔄 Multi-query support (up to 5 queries in one request)
+- ⚙️ Configurable result count and content extraction depth
 
 ## Prerequisites
 
@@ -91,30 +93,112 @@ The server provides one tool: `perplexity_search`
 
 ### Parameters
 
-- `query` (required): The search query
-- `model` (optional): The Perplexity model to use
-  - `llama-3.1-sonar-small-128k-online` (default)
-  - `llama-3.1-sonar-large-128k-online`
-  - `llama-3.1-sonar-huge-128k-online`
-- `return_citations` (optional, default: `true`): Whether to return citations
-- `return_images` (optional, default: `false`): Whether to return images
-- `temperature` (optional, default: `0.2`): Temperature for response generation (0-2)
+- `query` (required): String or array of strings (up to 5) - The search query/queries
+- `max_results` (optional, default: 10): Number of results to return (1-20)
+- `max_tokens_per_page` (optional, default: 1024): Maximum tokens to extract from each page
+- `country` (optional): ISO 3166-1 alpha-2 country code for regional search (e.g., "US", "GB", "DE", "JP")
+- `search_domain_filter` (optional): Array of domains to filter results (max 20)
 
-### Example
+### Examples
+
+**Basic Search:**
+```json
+{
+  "query": "latest AI developments 2024",
+  "max_results": 5
+}
+```
+
+**Regional Search:**
+```json
+{
+  "query": "government policies on renewable energy",
+  "country": "US",
+  "max_results": 10
+}
+```
+
+**Domain-Filtered Search:**
+```json
+{
+  "query": "climate change research",
+  "search_domain_filter": ["science.org", "nature.com", "cell.com"],
+  "max_results": 10
+}
+```
+
+**Multi-Query Search:**
+```json
+{
+  "query": [
+    "artificial intelligence trends 2024",
+    "machine learning breakthroughs",
+    "AI applications in healthcare"
+  ],
+  "max_results": 5
+}
+```
+
+### Response Format
+
+The server returns formatted search results with:
+- Result number and title
+- URL
+- Snippet (preview of the page content)
+- Publication date (when available)
+- Last updated date (when available)
+
+**Single Query Response Example:**
+```
+# Search Results for: "latest AI developments 2024"
+
+### 1. 2024: A year of extraordinary progress in AI
+**URL:** https://blog.google/technology/ai/2024-progress/
+**Snippet:** In 2024, we released the first models in our Gemini 2.0...
+**Published:** 2025-01-23
+**Last Updated:** 2025-09-25
+
+---
+
+### 2. The 2025 AI Index Report
+**URL:** https://hai.stanford.edu/ai-index/2025
+**Snippet:** Read the translation. In 2023, researchers introduced...
+**Published:** 2024-09-10
+
+---
+```
+
+**Multi-Query Response Example:**
+```
+# Multi-Query Search Results
+
+## Query 1: "artificial intelligence trends 2024"
+[Results for query 1...]
+
+---
+
+## Query 2: "machine learning breakthroughs"
+[Results for query 2...]
+
+---
+```
+
+## Example Usage with MCP Client
 
 When using with an MCP client like Claude:
 
 ```
-User: Can you search for "latest developments in quantum computing"?
+User: Can you search for "latest developments in quantum computing" and limit to academic sources?
 
-Claude: I'll search for that information using Perplexity.
-[Uses perplexity_search tool with query="latest developments in quantum computing"]
+Claude: I'll search for that using Perplexity's Search API.
+[Uses perplexity_search tool with:
+  query="latest developments in quantum computing"
+  search_domain_filter=["arxiv.org", "science.org", "nature.com"]
+  max_results=10
+]
 ```
 
-The server will return a formatted response with:
-- The main answer/summary
-- Citations (if enabled)
-- Related images (if enabled)
+The server will return ranked search results from Perplexity's continuously refreshed index with titles, URLs, snippets, and publication dates.
 
 ## Development
 

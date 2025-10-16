@@ -1,7 +1,7 @@
 {
   "name": "perplexity-mcp",
   "version": "1.0.0",
-  "description": "MCP server for Perplexity AI Search API",
+  "description": "MCP server for Perplexity Search API - Get ranked web search results from Perplexity's continuously refreshed index",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

@@ -10,7 +10,7 @@ import {
 import axios from "axios";
 import { z } from "zod";
 
-const PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions";
+const PERPLEXITY_API_URL = "https://api.perplexity.ai/search";
 
 // Validate environment variable
 const API_KEY = process.env.PERPLEXITY_API_KEY;
@@ -21,69 +21,76 @@ if (!API_KEY) {
 
 // Define the search parameters schema
 const SearchParamsSchema = z.object({
-  query: z.string().describe("The search query to send to Perplexity"),
-  model: z
+  query: z
+    .union([z.string(), z.array(z.string())])
+    .describe("The search query or array of queries (up to 5) to send to Perplexity"),
+  max_results: z
+    .number()
+    .min(1)
+    .max(20)
+    .optional()
+    .default(10)
+    .describe("Maximum number of results to return (1-20)"),
+  max_tokens_per_page: z
+    .number()
+    .optional()
+    .default(1024)
+    .describe("Maximum tokens to extract from each page (default: 1024)"),
+  country: z
     .string()
     .optional()
-    .default("llama-3.1-sonar-small-128k-online")
-    .describe("The Perplexity model to use for search"),
-  return_citations: z
-    .boolean()
+    .describe("ISO 3166-1 alpha-2 country code for regional search (e.g., 'US', 'GB', 'DE')"),
+  search_domain_filter: z
+    .array(z.string())
+    .max(20)
     .optional()
-    .default(true)
-    .describe("Whether to return citations"),
-  return_images: z
-    .boolean()
-    .optional()
-    .default(false)
-    .describe("Whether to return images"),
-  temperature: z
-    .number()
-    .min(0)
-    .max(2)
-    .optional()
-    .default(0.2)
-    .describe("Temperature for response generation (0-2)"),
+    .describe("List of domains to filter search results (max 20)"),
 });
 
 // Define available tools
 const SEARCH_TOOL: Tool = {
   name: "perplexity_search",
   description:
-    "Search the web using Perplexity AI's search API. Returns comprehensive answers with citations and sources.",
+    "Search the web using Perplexity AI's Search API. Returns ranked web search results with titles, URLs, snippets, and publication dates from Perplexity's continuously refreshed index.",
   inputSchema: {
     type: "object",
     properties: {
       query: {
-        type: "string",
-        description: "The search query to send to Perplexity",
-      },
-      model: {
-        type: "string",
-        description: "The Perplexity model to use for search",
-        default: "llama-3.1-sonar-small-128k-online",
-        enum: [
-          "llama-3.1-sonar-small-128k-online",
-          "llama-3.1-sonar-large-128k-online",
-          "llama-3.1-sonar-huge-128k-online",
+        description: "The search query or array of queries (up to 5) to send to Perplexity",
+        oneOf: [
+          {
+            type: "string",
+            description: "Single search query",
+          },
+          {
+            type: "array",
+            items: { type: "string" },
+            maxItems: 5,
+            description: "Multiple search queries for batch processing (up to 5)",
+          },
         ],
       },
-      return_citations: {
-        type: "boolean",
-        description: "Whether to return citations",
-        default: true,
-      },
-      return_images: {
-        type: "boolean",
-        description: "Whether to return images",
-        default: false,
-      },
-      temperature: {
+      max_results: {
         type: "number",
-        description: "Temperature for response generation (0-2)",
-        default: 0.2,
-        minimum: 0,
-        maximum: 2,
+        description: "Maximum number of results to return (1-20)",
+        default: 10,
+        minimum: 1,
+        maximum: 20,
+      },
+      max_tokens_per_page: {
+        type: "number",
+        description: "Maximum tokens to extract from each page (default: 1024). Higher values provide more comprehensive content.",
+        default: 1024,
+      },
+      country: {
+        type: "string",
+        description: "ISO 3166-1 alpha-2 country code for regional search (e.g., 'US', 'GB', 'DE', 'JP')",
+      },
+      search_domain_filter: {
+        type: "array",
+        items: { type: "string" },
+        maxItems: 20,
+        description: "List of domains to filter search results (max 20 domains)",
       },
     },
     required: ["query"],
@@ -120,49 +127,71 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const params = SearchParamsSchema.parse(request.params.arguments);
 
   try {
-    // Call Perplexity API
-    const response = await axios.post(
-      PERPLEXITY_API_URL,
-      {
-        model: params.model,
-        messages: [
-          {
-            role: "user",
-            content: params.query,
-          },
-        ],
-        temperature: params.temperature,
-        return_citations: params.return_citations,
-        return_images: params.return_images,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // Build request payload
+    const payload: Record<string, unknown> = {
+      query: params.query,
+      max_results: params.max_results,
+      max_tokens_per_page: params.max_tokens_per_page,
+    };
 
-    const data = response.data;
-    const answer = data.choices[0]?.message?.content || "No answer received";
-
-    // Format the response
-    let formattedResponse = `# Search Result\n\n${answer}\n`;
-
-    // Add citations if available
-    if (data.citations && data.citations.length > 0) {
-      formattedResponse += "\n\n## Citations\n";
-      data.citations.forEach((citation: string, index: number) => {
-        formattedResponse += `${index + 1}. ${citation}\n`;
-      });
+    // Add optional parameters
+    if (params.country) {
+      payload.country = params.country;
+    }
+    if (params.search_domain_filter && params.search_domain_filter.length > 0) {
+      payload.search_domain_filter = params.search_domain_filter;
     }
 
-    // Add images if available
-    if (data.images && data.images.length > 0) {
-      formattedResponse += "\n\n## Images\n";
-      data.images.forEach((image: string, index: number) => {
-        formattedResponse += `${index + 1}. ${image}\n`;
-      });
+    // Call Perplexity Search API
+    const response = await axios.post(PERPLEXITY_API_URL, payload, {
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = response.data;
+    const isMultiQuery = Array.isArray(params.query);
+
+    // Format the response
+    let formattedResponse = "";
+
+    if (isMultiQuery) {
+      // Handle multiple queries
+      const queries = params.query as string[];
+      formattedResponse = "# Multi-Query Search Results\n\n";
+      
+      if (Array.isArray(data.results) && data.results.length > 0) {
+        queries.forEach((query, queryIndex) => {
+          formattedResponse += `## Query ${queryIndex + 1}: "${query}"\n\n`;
+          const queryResults = data.results[queryIndex];
+          
+          if (Array.isArray(queryResults) && queryResults.length > 0) {
+            queryResults.forEach((result: any, index: number) => {
+              formattedResponse += formatSearchResult(result, index + 1);
+            });
+          } else {
+            formattedResponse += "No results found.\n\n";
+          }
+          formattedResponse += "---\n\n";
+        });
+      }
+    } else {
+      // Handle single query
+      formattedResponse = `# Search Results for: "${params.query}"\n\n`;
+      
+      if (data.results && Array.isArray(data.results) && data.results.length > 0) {
+        data.results.forEach((result: any, index: number) => {
+          formattedResponse += formatSearchResult(result, index + 1);
+        });
+      } else {
+        formattedResponse += "No results found.\n";
+      }
+    }
+
+    // Add search ID
+    if (data.id) {
+      formattedResponse += `\n*Search ID: ${data.id}*\n`;
     }
 
     return {
@@ -179,17 +208,38 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         error.response?.data?.error?.message ||
         error.message ||
         "Unknown error occurred";
-      throw new Error(`Perplexity API error: ${errorMessage}`);
+      throw new Error(`Perplexity Search API error: ${errorMessage}`);
     }
     throw error;
   }
 });
 
+// Helper function to format a single search result
+function formatSearchResult(result: any, index: number): string {
+  let formatted = `### ${index}. ${result.title}\n\n`;
+  formatted += `**URL:** ${result.url}\n\n`;
+  
+  if (result.snippet) {
+    formatted += `**Snippet:**\n${result.snippet}\n\n`;
+  }
+  
+  if (result.date) {
+    formatted += `**Published:** ${result.date}\n`;
+  }
+  
+  if (result.last_updated) {
+    formatted += `**Last Updated:** ${result.last_updated}\n`;
+  }
+  
+  formatted += "\n---\n\n";
+  return formatted;
+}
+
 // Start server
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Perplexity MCP Server running on stdio");
+  console.error("Perplexity Search API MCP Server running on stdio");
 }
 
 main().catch((error) => {
