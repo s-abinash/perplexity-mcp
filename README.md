@@ -57,12 +57,35 @@ PERPLEXITY_API_KEY=your_api_key_here
 
 To use this server with an MCP client like Claude Desktop, add the following to your MCP configuration file:
 
+<Info>
+**Note:** Some systems may require the full path to the `node` executable instead of just `node`. You can find the full path by running:
+```bash
+which node
+```
+For example, it might return `/usr/local/bin/node` or `/home/username/.nvm/versions/node/v20.0.0/bin/node`.
+</Info>
+
 **For Claude Desktop on macOS** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
     "perplexity": {
       "command": "node",
+      "args": ["/absolute/path/to/perplexity-mcp/dist/index.js"],
+      "env": {
+        "PERPLEXITY_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+If you encounter issues, try using the full path to node:
+```json
+{
+  "mcpServers": {
+    "perplexity": {
+      "command": "/usr/local/bin/node",
       "args": ["/absolute/path/to/perplexity-mcp/dist/index.js"],
       "env": {
         "PERPLEXITY_API_KEY": "your_api_key_here"
@@ -86,6 +109,27 @@ To use this server with an MCP client like Claude Desktop, add the following to 
   }
 }
 ```
+
+If you encounter issues on Windows, try using the full path to node:
+```json
+{
+  "mcpServers": {
+    "perplexity": {
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "args": ["C:\\path\\to\\perplexity-mcp\\dist\\index.js"],
+      "env": {
+        "PERPLEXITY_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+<Tip>
+To find your node path:
+- **macOS/Linux**: Run `which node` in terminal
+- **Windows**: Run `where node` in Command Prompt
+</Tip>
 
 ## Usage
 
