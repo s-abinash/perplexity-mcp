@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "perplexity": {
+      "command": "node",
+      "args": ["/absolute/path/to/perplexity-mcp/dist/index.js"],
+      "env": {
+        "PERPLEXITY_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
